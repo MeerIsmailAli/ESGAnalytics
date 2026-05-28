@@ -4,7 +4,7 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-only-secret-key"
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-secret-key")
 # DEBUG = True
 DEBUG = False
 ALLOWED_HOSTS = ["*"]
@@ -62,8 +62,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # }
 
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.environ.get("DATABASE_URL")
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
     )
 }
 
@@ -97,14 +98,11 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "https://esganalytics-1.onrender.com"
-# ]
-
-
+_default_cors = "http://localhost:5173,https://esganalytics-1.onrender.com"
 CORS_ALLOWED_ORIGINS = [
-    "https://esganalytics-1.onrender.com"
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", _default_cors).split(",")
+    if origin.strip()
 ]
 
 

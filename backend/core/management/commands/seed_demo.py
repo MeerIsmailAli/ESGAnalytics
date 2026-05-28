@@ -3,26 +3,26 @@ from django.core.management.base import BaseCommand
 from analysis.models import Entry, Source
 from core.models import User
 
+DEMO_PASSWORD = "password123"
+
 
 class Command(BaseCommand):
     help = "Seed demo users, sources, and entries"
 
-    def handle(self, *args, **options):
-        alice, created = User.objects.get_or_create(
-            username="alice",
-            defaults={"role": User.Role.ANALYST},
+    def _ensure_user(self, username, role):
+        user, _ = User.objects.get_or_create(
+            username=username,
+            defaults={"role": role},
         )
-        if created:
-            alice.set_password("password123")
-            alice.save()
+        # Always reset password so redeploys fix broken demo logins
+        user.set_password(DEMO_PASSWORD)
+        user.role = role
+        user.save()
+        return user
 
-        bob, created = User.objects.get_or_create(
-            username="bob",
-            defaults={"role": User.Role.ANALYST},
-        )
-        if created:
-            bob.set_password("password123")
-            bob.save()
+    def handle(self, *args, **options):
+        alice = self._ensure_user("alice", User.Role.ANALYST)
+        bob = self._ensure_user("bob", User.Role.ANALYST)
 
         sap_source, _ = Source.objects.get_or_create(
             name="Acme SAP fuel export",
@@ -70,4 +70,8 @@ class Command(BaseCommand):
             defaults={"status": Entry.Status.NEW, "created_by": alice},
         )
 
-        self.stdout.write(self.style.SUCCESS("Seeded demo data successfully."))
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Seeded demo data. Login: alice / password123 (or bob / password123)"
+            )
+        )
