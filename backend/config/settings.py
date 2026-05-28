@@ -1,5 +1,6 @@
 from pathlib import Path
 import dj_database_url
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -60,9 +61,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 # }
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgresql://postgres:postgres@localhost:5432/mysite',
-        conn_max_age=600
+    'default': dj_database_url.parse(
+        os.environ.get("DATABASE_URL")
     )
 }
 
