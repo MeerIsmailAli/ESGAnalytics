@@ -28,7 +28,6 @@ class LoginView(APIView):
 
         token, _ = Token.objects.get_or_create(user=user)
 
-        tenant = user.tenant
         return Response(
             {
                 "token": token.key,
@@ -36,15 +35,6 @@ class LoginView(APIView):
                     "id": user.id,
                     "username": user.username,
                     "role": user.role,
-                    "tenant": (
-                        {
-                            "id": tenant.id,
-                            "name": tenant.name,
-                            "slug": tenant.slug,
-                        }
-                        if tenant
-                        else None
-                    ),
                 },
             }
         )

@@ -1,12 +1,23 @@
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import generics
 
-from .models import AnalysisRecord
-from .serializers import AnalysisRecordSerializer
+from .models import Entry, Source
+from .serializers import EntrySerializer, SourceSerializer
 
 
-class AnalysisListView(APIView):
-    def get(self, request):
-        queryset = AnalysisRecord.objects.filter(tenant=request.user.tenant).order_by("-id")
-        serializer = AnalysisRecordSerializer(queryset, many=True)
-        return Response({"results": serializer.data})
+class SourceListCreateView(generics.ListCreateAPIView):
+    queryset = Source.objects.all().order_by("-id")
+    serializer_class = SourceSerializer
+
+
+class EntryListCreateView(generics.ListCreateAPIView):
+    queryset = Entry.objects.select_related(
+        "source", "created_by", "approved_by"
+    ).order_by("-id")
+    serializer_class = EntrySerializer
+
+
+class EntryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Entry.objects.select_related(
+        "source", "created_by", "approved_by"
+    )
+    serializer_class = EntrySerializer

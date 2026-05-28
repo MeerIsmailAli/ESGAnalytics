@@ -1,10 +1,23 @@
 # Breathe ESG Prototype - Phase 1
 
-Minimal multi-tenant scaffold with:
-- Django + DRF backend
-- React frontend
-- `POST /api/auth/login`
-- `GET /api/analysis` (protected, tenant-filtered)
+Simple shared-schema CRUD:
+
+- **Sources** — register an ingestion source (SAP / utility / travel)
+- **Entries** — rows under a source; analysts can flag, approve, or delete
+- All analysts see all data (no tenant isolation)
+- `created_by` / `approved_by` tracked on entries
+
+## API
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/auth/login` | Login |
+| GET/POST | `/api/sources` | List / add sources |
+| GET/POST | `/api/entries` | List / add entries |
+| PATCH | `/api/entries/:id` | Update status (`new`, `flagged`, `approved`) |
+| DELETE | `/api/entries/:id` | Delete entry |
+
+Approving sets `approved_by` and `approved_at` automatically.
 
 ## Backend setup
 
@@ -13,13 +26,12 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+rm -f db.sqlite3
 python manage.py makemigrations
 python manage.py migrate
 python manage.py seed_demo
 python manage.py runserver
 ```
-
-Backend runs on `http://localhost:8000`.
 
 ## Frontend setup
 
@@ -29,15 +41,9 @@ npm install
 npm run dev
 ```
 
-Frontend runs on `http://localhost:5173`.
+## Demo login
 
-## Demo credentials
+- `alice / password123`
+- `bob / password123`
 
-- `alice / password123` (Tenant: Acme Corp)
-- `bob / password123` (Tenant: Globex)
-
-## Multi-tenancy rule in code
-
-Protected analysis endpoint filters by current user tenant:
-
-`AnalysisRecord.objects.filter(tenant=request.user.tenant)`
+Both are analysts and see the same shared data.
