@@ -1,0 +1,33 @@
+{
+  "expenses": [
+    {
+      "id": "EXP-1001",
+      "expenseType": "Airfare",
+      "origin": "DEL",
+      "destination": "BOM",
+      "distanceKm": 1150,
+      "reportDate": "2026-05-10"
+    },
+    {
+      "id": "EXP-1002",
+      "expenseType": "Hotel",
+      "city": "Mumbai",
+      "destination": "BOM",
+      "reportDate": "2026-05-11"
+    },
+    {
+      "id": "EXP-1003",
+      "expenseType": "Ground",
+      "origin": "BOM",
+      "destination": "PNQ",
+      "reportDate": "2026-05-12"
+    },
+    {
+      "id": "EXP-1004",
+      "expenseType": "Airfare",
+      "origin": "LHR",
+      "destination": "JFK",
+      "reportDate": "2026-05-20"
+    }
+  ]
+}

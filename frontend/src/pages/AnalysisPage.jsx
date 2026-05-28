@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { api, clearSession } from "../api";
 
 const SOURCE_TYPES = [
-  { value: "sap", label: "SAP" },
-  { value: "utility", label: "Utility" },
-  { value: "travel", label: "Travel" },
+  { value: "sap", label: "SAP (semicolon CSV)" },
+  { value: "utility", label: "Utility (CSV)" },
+  { value: "travel", label: "Travel (JSON)" },
 ];
 
 export default function AnalysisPage() {
@@ -16,15 +16,13 @@ export default function AnalysisPage() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [uploadMsg, setUploadMsg] = useState("");
 
-  const [sourceForm, setSourceForm] = useState({
-    name: "",
+  const [uploadForm, setUploadForm] = useState({
     source_type: "sap",
-    client_name: "",
-  });
-  const [entryForm, setEntryForm] = useState({
-    source: "",
-    label: "",
+    client_name: "Acme Corp",
+    name: "",
+    file: null,
   });
 
   async function loadData() {
@@ -52,21 +50,36 @@ export default function AnalysisPage() {
     loadData();
   }, [navigate]);
 
-  async function addSource(event) {
+  async function handleUpload(event) {
     event.preventDefault();
-    await api.post("/sources", sourceForm);
-    setSourceForm({ name: "", source_type: "sap", client_name: "" });
-    await loadData();
-  }
+    if (!uploadForm.file) {
+      setUploadMsg("Pick a file first");
+      return;
+    }
+    setUploadMsg("Uploading...");
+    const body = new FormData();
+    body.append("source_type", uploadForm.source_type);
+    body.append("client_name", uploadForm.client_name);
+    if (uploadForm.name) body.append("name", uploadForm.name);
+    body.append("file", uploadForm.file);
 
-  async function addEntry(event) {
-    event.preventDefault();
-    await api.post("/entries", {
-      source: Number(entryForm.source),
-      label: entryForm.label,
-    });
-    setEntryForm({ source: "", label: "" });
-    await loadData();
+    try {
+      // Do NOT set Content-Type — browser must add multipart boundary
+      const res = await api.post("/sources/upload", body);
+      setUploadMsg(`Imported ${res.data.created} entries (${res.data.errors?.length || 0} parse warnings)`);
+      setUploadForm({ ...uploadForm, file: null, name: "" });
+      event.target.reset();
+      await loadData();
+    } catch (requestError) {
+      const data = requestError.response?.data;
+      const msg =
+        data?.detail ||
+        (typeof data === "object" ? JSON.stringify(data) : null) ||
+        requestError.message ||
+        "Upload failed";
+      setUploadMsg(msg);
+      console.error("Upload error:", data || requestError);
+    }
   }
 
   async function updateStatus(entryId, status) {
@@ -85,6 +98,8 @@ export default function AnalysisPage() {
     navigate("/login");
   }
 
+  const suspiciousCount = entries.filter((e) => e.is_suspicious).length;
+
   return (
     <div className="container wide">
       <div className="header-row">
@@ -92,24 +107,19 @@ export default function AnalysisPage() {
         <button onClick={logout}>Logout</button>
       </div>
       <p className="hint">
-        Logged in as <strong>{user?.username}</strong> ({user?.role})
+        Logged in as <strong>{user?.username}</strong> — {entries.length} entries,{" "}
+        {suspiciousCount} suspicious
       </p>
 
       {error && <p className="error">{error}</p>}
 
       <section className="card">
-        <h2>Add source</h2>
-        <form className="inline-form" onSubmit={addSource}>
-          <input
-            placeholder="Source name"
-            value={sourceForm.name}
-            onChange={(e) => setSourceForm({ ...sourceForm, name: e.target.value })}
-            required
-          />
+        <h2>Ingest data (upload)</h2>
+        <form className="inline-form" onSubmit={handleUpload}>
           <select
-            value={sourceForm.source_type}
+            value={uploadForm.source_type}
             onChange={(e) =>
-              setSourceForm({ ...sourceForm, source_type: e.target.value })
+              setUploadForm({ ...uploadForm, source_type: e.target.value })
             }
           >
             {SOURCE_TYPES.map((t) => (
@@ -120,50 +130,43 @@ export default function AnalysisPage() {
           </select>
           <input
             placeholder="Client name"
-            value={sourceForm.client_name}
+            value={uploadForm.client_name}
             onChange={(e) =>
-              setSourceForm({ ...sourceForm, client_name: e.target.value })
+              setUploadForm({ ...uploadForm, client_name: e.target.value })
             }
-          />
-          <button type="submit">Add source</button>
-        </form>
-      </section>
-
-      <section className="card">
-        <h2>Add entry (manual row)</h2>
-        <form className="inline-form" onSubmit={addEntry}>
-          <select
-            value={entryForm.source}
-            onChange={(e) => setEntryForm({ ...entryForm, source: e.target.value })}
             required
-          >
-            <option value="">Pick source</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.source_type})
-              </option>
-            ))}
-          </select>
+          />
           <input
-            placeholder="Row label / description"
-            value={entryForm.label}
-            onChange={(e) => setEntryForm({ ...entryForm, label: e.target.value })}
+            placeholder="Batch name (optional)"
+            value={uploadForm.name}
+            onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
+          />
+          <input
+            type="file"
+            accept=".csv,.txt,.json"
+            onChange={(e) =>
+              setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })
+            }
             required
           />
-          <button type="submit">Add entry</button>
+          <button type="submit">Upload & ingest</button>
         </form>
+        {uploadMsg && <p className="hint">{uploadMsg}</p>}
+        <p className="hint">
+          Samples in repo: <code>backend/sample_files/</code>
+        </p>
       </section>
 
       <section className="card">
         <h2>Sources ({sources.length})</h2>
         {sources.length === 0 ? (
-          <p className="hint">No sources yet.</p>
+          <p className="hint">No sources yet — upload a file or run seed_demo on deploy.</p>
         ) : (
           <ul className="compact-list">
             {sources.map((s) => (
               <li key={s.id}>
-                <strong>{s.name}</strong> — {s.source_type} — {s.client_name || "—"} (
-                {s.entry_count} entries) — added by {s.created_by_username || "—"}
+                <strong>{s.name}</strong> — {s.source_type} — {s.client_name || "—"} —{" "}
+                {s.entry_count} entries — {s.filename || "manual"}
               </li>
             ))}
           </ul>
@@ -171,58 +174,74 @@ export default function AnalysisPage() {
       </section>
 
       <section className="card">
-        <h2>Entries ({entries.length})</h2>
+        <h2>Entries</h2>
         {loading ? (
           <p>Loading...</p>
         ) : entries.length === 0 ? (
           <p className="hint">No entries yet.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Source</th>
-                <th>Client</th>
-                <th>Status</th>
-                <th>Created by</th>
-                <th>Approved by</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.label}</td>
-                  <td>
-                    {entry.source_name} ({entry.source_type})
-                  </td>
-                  <td>{entry.client_name || "—"}</td>
-                  <td>
-                    <span className={`status status-${entry.status}`}>
-                      {entry.status}
-                    </span>
-                  </td>
-                  <td>{entry.created_by_username || "—"}</td>
-                  <td>{entry.approved_by_username || "—"}</td>
-                  <td className="actions">
-                    {entry.status !== "flagged" && (
-                      <button onClick={() => updateStatus(entry.id, "flagged")}>
-                        Flag
-                      </button>
-                    )}
-                    {entry.status !== "approved" && (
-                      <button onClick={() => updateStatus(entry.id, "approved")}>
-                        Approve
-                      </button>
-                    )}
-                    <button className="danger" onClick={() => deleteEntry(entry.id)}>
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Client</th>
+                  <th>Scope</th>
+                  <th>Activity</th>
+                  <th>Qty</th>
+                  <th>CO2e (kg)</th>
+                  <th>Status</th>
+                  <th>Flagged by</th>
+                  <th>Approved by</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className={entry.is_suspicious ? "row-suspicious" : ""}
+                  >
+                    <td>
+                      {entry.label}
+                      {entry.is_suspicious && (
+                        <div className="warn">{entry.suspicion_reason}</div>
+                      )}
+                    </td>
+                    <td>{entry.client_name || "—"}</td>
+                    <td>{entry.scope}</td>
+                    <td>{entry.activity_type}</td>
+                    <td>
+                      {entry.normalized_quantity} {entry.normalized_unit}
+                    </td>
+                    <td>{entry.emissions_kg_co2e ?? "—"}</td>
+                    <td>
+                      <span className={`status status-${entry.status}`}>
+                        {entry.status}
+                      </span>
+                    </td>
+                    <td>{entry.flagged_by_username || "—"}</td>
+                    <td>{entry.approved_by_username || "—"}</td>
+                    <td className="actions">
+                      {entry.status !== "flagged" && (
+                        <button onClick={() => updateStatus(entry.id, "flagged")}>
+                          Flag
+                        </button>
+                      )}
+                      {entry.status !== "approved" && (
+                        <button onClick={() => updateStatus(entry.id, "approved")}>
+                          Approve
+                        </button>
+                      )}
+                      <button className="danger" onClick={() => deleteEntry(entry.id)}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

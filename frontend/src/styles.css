@@ -127,3 +127,23 @@ button.danger {
   margin: 0;
   padding-left: 1.2rem;
 }
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.row-suspicious {
+  background: #fff7ed;
+}
+
+.warn {
+  font-size: 0.8rem;
+  color: #c2410c;
+}
+
+code {
+  font-size: 0.85rem;
+  background: #f3f4f6;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}

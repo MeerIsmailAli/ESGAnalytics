@@ -1,8 +1,12 @@
 import axios from "axios";
 
-// Production backend on Render (swap to localhost when developing locally)
-const API_BASE_URL = "https://esganalytics.onrender.com/api";
-// const API_BASE_URL = "http://localhost:8000/api";
+const isLocal =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+
+const API_BASE_URL = isLocal
+  ? "http://localhost:8000/api"
+  : "https://esganalytics.onrender.com/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

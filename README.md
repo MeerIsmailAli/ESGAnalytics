@@ -1,11 +1,12 @@
-# Breathe ESG Prototype - Phase 1
+# Breathe ESG Prototype
 
-Simple shared-schema CRUD:
+ESG data ingest + analyst review dashboard.
 
-- **Sources** — register an ingestion source (SAP / utility / travel)
-- **Entries** — rows under a source; analysts can flag, approve, or delete
-- All analysts see all data (no tenant isolation)
-- `created_by` / `approved_by` tracked on entries
+- **SAP** — semicolon flat file CSV upload
+- **Utility** — portal-style CSV upload  
+- **Travel** — JSON file (Concur-like API shape)
+- **Entries** — scope, emissions estimate, flag / approve / delete
+- **Docs:** `MODEL.md`, `DECISIONS.md`, `TRADEOFFS.md`, `SOURCES.md`
 
 ## API
 
@@ -13,9 +14,12 @@ Simple shared-schema CRUD:
 |--------|------|---------|
 | POST | `/api/auth/login` | Login |
 | GET/POST | `/api/sources` | List / add sources |
+| POST | `/api/sources/upload` | Upload file (multipart: `source_type`, `client_name`, `file`) |
 | GET/POST | `/api/entries` | List / add entries |
 | PATCH | `/api/entries/:id` | Update status (`new`, `flagged`, `approved`) |
 | DELETE | `/api/entries/:id` | Delete entry |
+
+Sample files: `backend/sample_files/` (loaded by `seed_demo` on deploy).
 
 Approving sets `approved_by` and `approved_at` automatically.
 

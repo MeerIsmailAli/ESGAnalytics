@@ -5,8 +5,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-secret-key")
-# DEBUG = True
-DEBUG = False
+DEBUG = os.environ.get("DEBUG", "true").lower() in ("1", "true", "yes")
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
@@ -98,7 +97,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-_default_cors = "http://localhost:5173,https://esganalytics-1.onrender.com"
+_default_cors = "http://localhost:5173,http://127.0.0.1:5173,https://esganalytics-1.onrender.com"
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get("CORS_ALLOWED_ORIGINS", _default_cors).split(",")
